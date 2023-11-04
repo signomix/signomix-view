@@ -1,6 +1,8 @@
 import { error } from '@sveltejs/kit';
 
 export function load({ params }) {
+    throw error(404, 'Not Found');
+/*     
     // echo -n myToken:dashboardID | base64
     let example = 'bXlUb2tlbjpkYXNoYm9hcmRJRA=='
     let parts = ['', '']
@@ -22,6 +24,6 @@ export function load({ params }) {
     if(notFound){
         throw error(404, 'Not Found');
     }
-    return data
+    return data */
     
 }

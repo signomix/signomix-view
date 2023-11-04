@@ -1,3 +1,5 @@
-<h1>Signomix dashboard viewer</h1>
+<h3>Signomix dashboard viewer</h3>
 
-<h2>404 - pulpit nie jest dostępny</h2>
+<!--<p>404 - pulpit nie jest dostępny</p>-->
+
+<p>The desktop preview feature is temporarily unavailable.</p>
