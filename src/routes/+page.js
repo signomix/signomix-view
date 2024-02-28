@@ -3,13 +3,13 @@
     let deviceEUI = url.searchParams.get('d');
     return { key};
 } */
-import { browser, dev, } from '$app/environment';
+/* import { browser, dev, } from '$app/environment';
 import { utils } from '$lib/utils.js';
 
 export const load = async ({ params, url }) => {
 
     let token = url.searchParams.get('k');
-    let deviceEUI = url.searchParams.get('d');
+    let dashboardID = url.searchParams.get('d');
 
     const getSelectedConfig = async (serviceUrl) => {
       let config = null
@@ -19,7 +19,7 @@ export const load = async ({ params, url }) => {
         }
       } else {
         try {
-          let endpoint = serviceUrl + "/api/core/v2/dashboards/" + deviceEUI
+          let endpoint = serviceUrl + "/api/core/v2/dashboards/" + dashboardID
           let headers = new Headers();
           headers.set('Authentication', token);
           await fetch(endpoint, { headers: headers }).then(response => {
@@ -61,4 +61,4 @@ export const load = async ({ params, url }) => {
     }
   
     return await transform()
-  }
+  } */

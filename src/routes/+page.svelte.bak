@@ -4,15 +4,12 @@
 </div>
 {/if}
 
-<div
-    class="component d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    {#if dashboardConfig ==null || dashboardConfig.title==undefined }
+<div class="component d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    {#if dashboardConfig.title==undefined }
     <h5>Brak</h5>
     {:else}
     <h5>{dashboardConfig.title}</h5>
     {/if}
-    <span class="badge rounded-pill text-bg-light h5 me-2">{secondsToRefresh}</span>
-    {#if additionalFeatures}
     <span>
         <a title={utils.getLabel('refresh',labels,language)} on:click={refreshView}><i
                 class="bi bi-arrow-clockwise h5 me-2 link-dark"></i></a>
@@ -25,7 +22,6 @@
             {/if}
         </a>
     </span>
-    {/if}
 </div>
 <div class="dashboard-container" id={dashboardId}>
     {#if items.length==0}
@@ -97,15 +93,15 @@
     </div>
 </div>
 <script>
-    import { onMount, beforeUpdate, afterUpdate } from 'svelte';
+    import { onMount } from 'svelte';
     import Grid from "svelte-grid";
     import gridHelp from "svelte-grid/build/helper/index.mjs";
     import { dev } from '$app/environment';
     import { utils } from '$lib/utils.js';
     import { goto, afterNavigate, beforeNavigate } from '$app/navigation';
     import { invalidateAll } from '$app/navigation';
-    import { token } from '$lib/usersession.js';
-    import { page } from '$app/stores';
+    //import { token, profile, language, isAuthenticated } from '$lib/usersession.js';
+    //import { defaultOrganizationId } from '$lib/stores.js';
 
     import DashboardFilterForm from '$lib/components/DashboardFilterForm.svelte';
     import DashboardLinkForm from '$lib/components/DashboardLinkForm.svelte';
@@ -124,15 +120,7 @@
     import ReportWidget from '$lib/components/widgets/ReportWidget.svelte';
     import MapWidget from '$lib/components/widgets/MapWidget.svelte';
 
-    let data = {items:[]}
-    $: dashboardConfig = data
-    $: items = data.items   
-    let sessionToken = ''
-    let refreshing = false
-
-    let additionalFeatures = false
-    const defaultInterval = 60
-    let secondsToRefresh = defaultInterval
+    export let data
 
     let language = 'en'
     let errorMessage = ''
@@ -142,9 +130,13 @@
     let { item } = gridHelp;
 
     let editable = false; // set to true to enable editing
+
+    let dashboardConfig = {}
+    let items = []
+
     let dashboardFilter = { from: '', to: '' }
     let editedFilter = { from: '', to: '' }
-
+    let dashboardLinkConfig = { link: '', code: '' }
     let applications = [
         {
             id: 0,
@@ -221,61 +213,131 @@
     }
 
     let getRefreshInterval = function () {
+        const defaultInterval = 300
         let interval = dev ? 10 : defaultInterval
+        /*         try {
+                    for (let i = 0; i < applications.length; i++) {
+                        if (applications[i].name === "system") {
+                            let config = JSON.parse(applications[i].configuration)
+                            let tmpIntv = config.refreshInterval
+                            if (tmpIntv != null && tmpIntv != undefined && tmpIntv > 0) {
+                                interval = tmpIntv
+                            }
+                            break
+                        }
+                    }
+                } catch (e) {
+                    console.log(e)
+                } */
         return interval * 1000 // in ms
     }
 
-    let show = function () {
-        //dashboardConfig = data
-        //blockChanges(dashboardConfig)
-        mergeConfigs()
-        //console.log('dashboardConfig ', dashboardConfig)
-        if(dashboardConfig!=null && dashboardConfig.items!=undefined){
-            items = dashboardConfig.items
-        }
+    /*     let getApplications = function () {
+            const headers = new Headers()
+            let method = 'GET'
+            let url = utils.getBackendUrl(location) + "/api/core/application?offset=0&limit=1000"
+            headers.set('Authentication', $token);
+            let apps = fetch(url, { headers: headers }
+            ).then((response) => {
+                if (response.status == 200) {
+                    errorMessage = ''
+                    return response.json()
+                } else if (response.status == 401 || response.status == 403) {
+                    token.set(null)
+                } else {
+                    alert(
+                        utils.getMessage(utils.FETCH_STATUS)
+                            .replace('%1', response.status)
+                            .replace('%2', response.statusText)
+                    )
+                }
+            }).catch((error) => {
+                errorMessage = error.getMessage
+                if (errorMessage == 'Failed to fetch' && location.protocol.toLowerCase() == 'https') {
+                    errorMessage = errorMessage + utils.getLabel('fetcherror_message', labels, $language)
+                }
+                console.log(error)
+            });
+            return apps
+        } */
 
+    let show = function () {
+        dashboardConfig = data
+        blockChanges(dashboardConfig)
+        mergeConfigs()
+        console.log('dashboardConfig ', dashboardConfig)
+        console.log('SHOW dashboard ' + dashboardConfig.id)
+        //console.log('dashboardConfig ', dashboardConfig)
+        items = dashboardConfig.items
         cols = [
             [800, 10],
             [500, 1],
         ];
     }
 
+    /*     let findApplication = function (id) {
+            console.log('findApplication', applications)
+            for (let i = 0; i < applications.length; i++) {
+                if (applications[i].id == id) {
+                    return applications[i]
+                }
+            }
+            return null
+        } */
+
     let mergeConfigs = function () {
+        // it doesn't work because of fetch in getApplications
+        /*         for(let i=0;i<dashboardConfig.widgets.length;i++){
+                    let widget=dashboardConfig.widgets[i]
+                    let app = findApplication(widget.app_id);
+                    if(app==null){
+                        continue
+                    }
+                    console.log('app', app)
+                    let appCfg = JSON.parse(app.configuration)
+                    let cfg=JSON.parse(widget.config)
+                    let combined = Object.assign({}, cfg, appCfg);
+                    dashboardConfig.widgets[i].config=JSON.stringify(...combined)
+                } */
     }
 
-    //let interval
-
+    let interval
     afterNavigate(({ from, to }) => {
         console.log('afterNavigate', from, to);
+        /*         if (!$isAuthenticated) {
+                    console.log('redirect to login');
+                    goto('/login');
+                } else {
+                    console.log('settings', data);
+                } */
         if (!dev) {
             //applications = getApplications()
         }
-        loadDashboardConfig()
-        console.log('data', data)
-        //clearInterval(interval);
-        //clearInterval(interval2);
-        //interval = setInterval(() => {
-        //    refreshView()
-        //}, getRefreshInterval());
+        clearInterval(interval);
+        interval = setInterval(() => {
+            invalidateAll()
+            show()
+        }, getRefreshInterval());
+        show()
     })
     beforeNavigate(({ from, to }) => {
         console.log('beforeNavigate', from, to);
-        //clearInterval(interval);
-    })
-    afterUpdate(() => {
+        clearInterval(interval);
     })
     onMount(() => {
-        const interval2 = setInterval(() => {
-			secondsToRefresh=secondsToRefresh-1
-            if(secondsToRefresh==0){
-                refreshView()
-            }
-		}, 1000);
-		return () => {
-			clearInterval(interval2);
-		};
     });
 
+
+
+    const blockChanges = function (config) {
+        //set draggable and resizable to false
+        config.items.forEach(function (item) {
+            item[1].draggable = false
+            item[1].resizable = false
+            item[10].draggable = false
+            item[10].resizable = false
+        })
+    }
     const handleResize = (event) => {
         numberOfCols = event.detail.cols
     }
@@ -283,6 +345,9 @@
     const handleMount = (event) => {
         numberOfCols = event.detail.cols
     }
+
+
+
 
     let setFilter = function (event) {
         //editedFilter.from = utils.getLocalDateFormat(dashboardFilter.from)
@@ -293,11 +358,8 @@
     }
 
     function refreshView() {
-        refreshing = true
-        console.log('refreshing', refreshing)
         invalidateAll()
         show()
-        secondsToRefresh=getRefreshInterval()/1000
     }
 
     function filterFormCallback(cfg) {
@@ -352,64 +414,6 @@
             'pl': "ukryte (brak uprawnień)",
             'en': "hidden (no permissions)"
         },
-    }
-
-    function loadDashboardConfig() {
-        var tokenObject;
-        let serviceUrl = utils.getBackendUrl(location)
-        console.log('page', $page);
-        // Call the API - get the token object
-        token.set($page.params.path)
-        fetch(serviceUrl + '/api/auth/token/' + $page.params.path).then(function (response) {
-            if (response.ok) {
-                return response.json();
-            } else {
-                return Promise.reject(response);
-            }
-        }).then(function (data) {
-            // Store the token data to a variable
-            tokenObject = data;
-            const headers = new Headers()
-            headers.set('Authentication', tokenObject.token);
-            // Fetch user data
-            //return fetch(serviceUrl +'/api/auth/v2/'+ tokenObject.token, { headers: headers });
-            return fetch(serviceUrl + '/api/core/v2/dashboards/' + tokenObject.payload, { headers: headers });
-        }).then(function (response) {
-            if (response.ok) {
-                return response.json();
-            } else {
-                return Promise.reject(response);
-            }
-        }).then(function (dashboardConfig) {
-            console.log('last step result:',tokenObject, dashboardConfig);
-            data = transform(dashboardConfig);
-            show()
-            return data;
-        }).catch(function (error) {
-            console.warn(error);
-        });
-    }
-
-    function transform(cfg) {
-        console.log('transform', cfg);
-        for (let i = 0; i < cfg.items.length; i++) {
-            let item = cfg.items[i]
-            if (item['1'] !== null) {
-                item['1'] = item['_el1']
-                delete item['_el1']
-            }
-            if (item['10'] !== null) {
-                item['10'] = item['_el10']
-                delete item['_el10']
-            }
-        }
-        cfg.items.forEach(function (item) {
-            item[1].draggable = false
-            item[1].resizable = false
-            item[10].draggable = false
-            item[10].resizable = false
-        })
-        return cfg
     }
 
 </script>

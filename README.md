@@ -10,5 +10,6 @@ After clonning repo:
   1: cd signomix-view
   2: npm install
   3: npm i -D @sveltejs/adapter-static
-  4: npm run biild
+  4: npm i svelte-chartjs chart.js
+  5: npm run biild
 ```

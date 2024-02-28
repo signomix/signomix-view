@@ -10,6 +10,8 @@ export const utils = {
       x = x.substring(4)
     }else if (x.startsWith('cloud.')) {
       x = x.substring(6)
+    }else if (x.startsWith('view.')) {
+      x = x.substring(5)
     }
     return url.protocol + '//' + x
   },

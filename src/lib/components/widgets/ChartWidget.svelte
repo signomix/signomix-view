@@ -5,8 +5,9 @@
     import { sgxhelper } from '$lib/sgxhelper.js';
     import { dev } from '$app/environment';
     import { onMount } from 'svelte';
-    import Chart from 'chart.js/auto';
-    import 'chartjs-adapter-moment';
+    //import Chart from 'chart.js/auto';
+    //import 'chartjs-adapter-moment';
+    //import { Chart } from 'svelte-chartjs';
     import { afterUpdate } from 'svelte';
 
     export let config
@@ -31,6 +32,7 @@
     var myChart
     async function show(ctx) {
         try {
+            console.log('show chart')
             let promise = await sgxdata.getData(dev, apiUrl, config, filter, $token, transform)
                 .then(function (data) {
                     if (myChart) myChart.destroy()
