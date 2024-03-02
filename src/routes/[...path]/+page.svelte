@@ -4,14 +4,15 @@
 </div>
 {/if}
 
-<div
-    class="component d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    {#if dashboardConfig ==null || dashboardConfig.title==undefined }
-    <h5>Brak</h5>
+<div class="component d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-1">
+    {#if loadingData}
+    <h5>{utils.getLabel('loading',labels,language)}</h5>
+    {:else if dashboardConfig ==null || dashboardConfig.title==undefined }
+    <h5>{utils.getLabel('notfound',labels,language)}</h5>
     {:else}
     <h5>{dashboardConfig.title}</h5>
-    {/if}
     <span class="badge rounded-pill text-bg-light h5 me-2">{secondsToRefresh}</span>
+    {/if}
     {#if additionalFeatures}
     <span>
         <a title={utils.getLabel('refresh',labels,language)} on:click={refreshView}><i
@@ -28,7 +29,11 @@
     {/if}
 </div>
 <div class="dashboard-container" id={dashboardId}>
-    {#if items.length==0}
+    {#if loadingData}
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    {:else if dashboardConfig ==null || dashboardConfig.title==undefined || items.length==0}
     <div class="alert alert-light mx-auto my-auto">{utils.getLabel('empty',labels,language)}</div>
     {:else}
     <Grid gap={[2,2]} bind:items={items} rowHeight={100} let:item {cols} let:index on:resize={handleResize}
@@ -124,9 +129,10 @@
     import ReportWidget from '$lib/components/widgets/ReportWidget.svelte';
     import MapWidget from '$lib/components/widgets/MapWidget.svelte';
 
-    let data = {items:[]}
+    let loadingData = true
+    let data = { items: [] }
     $: dashboardConfig = data
-    $: items = data.items   
+    $: items = data.items
     let sessionToken = ''
     let refreshing = false
 
@@ -222,6 +228,9 @@
 
     let getRefreshInterval = function () {
         let interval = dev ? 10 : defaultInterval
+        if (dashboardConfig == null || dashboardConfig == undefined) {
+            interval = 10 * 24 * 60 * 60
+        }
         return interval * 1000 // in ms
     }
 
@@ -230,7 +239,7 @@
         //blockChanges(dashboardConfig)
         mergeConfigs()
         //console.log('dashboardConfig ', dashboardConfig)
-        if(dashboardConfig!=null && dashboardConfig.items!=undefined){
+        if (dashboardConfig != null && dashboardConfig.items != undefined) {
             items = dashboardConfig.items
         }
 
@@ -266,14 +275,14 @@
     })
     onMount(() => {
         const interval2 = setInterval(() => {
-			secondsToRefresh=secondsToRefresh-1
-            if(secondsToRefresh==0){
+            secondsToRefresh = secondsToRefresh - 1
+            if (secondsToRefresh == 0) {
                 refreshView()
             }
-		}, 1000);
-		return () => {
-			clearInterval(interval2);
-		};
+        }, 1000);
+        return () => {
+            clearInterval(interval2);
+        };
     });
 
     const handleResize = (event) => {
@@ -297,7 +306,7 @@
         console.log('refreshing', refreshing)
         invalidateAll()
         show()
-        secondsToRefresh=getRefreshInterval()/1000
+        secondsToRefresh = getRefreshInterval() / 1000
     }
 
     function filterFormCallback(cfg) {
@@ -316,6 +325,10 @@
     }
 
     let labels = {
+        'loading': {
+            'pl': "Pobieranie danych...",
+            'en': "Loading data..."
+        },
         'refresh': {
             'pl': "Odśwież",
             'en': "Refresh"
@@ -345,12 +358,16 @@
             'en': " Possible cause: self signed certificates are not supported."
         },
         'empty': {
-            'pl': "Pulpit nie zawiera żadnych zdefiniowanych kontrolek.",
-            'en': "Dashboard does not contain any widgets."
+            'pl': "Nie znaleziono definicji pulpitu lub brak zdefiniowanych kontrolek.",
+            'en': "No dashboard definition found or no widgets defined."
         },
         'hidden': {
             'pl': "ukryte (brak uprawnień)",
             'en': "hidden (no permissions)"
+        },
+        'notfound': {
+            'pl': "Nie znaleziono pulpitu",
+            'en': "Dashboard not found"
         },
     }
 
@@ -381,11 +398,12 @@
                 return Promise.reject(response);
             }
         }).then(function (dashboardConfig) {
-            console.log('last step result:',tokenObject, dashboardConfig);
+            console.log('last step result:', tokenObject, dashboardConfig);
             data = transform(dashboardConfig);
             show()
             return data;
         }).catch(function (error) {
+            loadingData = false
             console.warn(error);
         });
     }
@@ -409,6 +427,7 @@
             item[10].draggable = false
             item[10].resizable = false
         })
+        loadingData = false
         return cfg
     }
 
