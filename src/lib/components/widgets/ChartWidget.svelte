@@ -177,8 +177,8 @@
                         displayFormats: {
                             minute: 'HH:mm:ss',
                             hour: 'HH:mm:ss',
-                            day: 'D-MM',
-                            week: 'D-MM',
+                            day: 'd-MM',
+                            week: 'd-MM',
                             quarter: 'MMM-YYYY'
                         }
                     }
