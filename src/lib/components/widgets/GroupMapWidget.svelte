@@ -13,7 +13,7 @@
     export let filter
 
     let errorMessage = '';
-    const apiUrl = utils.getBackendUrl(location) + '/api/provider/v2/device/'
+    const apiUrl = utils.getBackendUrl(location) + '/api/provider/group/'
 
     let mapElement;
     let map;
@@ -22,6 +22,8 @@
     const _latitude = 'latitude'
     const _longitude = 'longitude'
 
+    var calcAlert = false
+    let rangeName = ''
 
     //let first = false
     onMount(() => {
@@ -30,7 +32,7 @@
 
     onDestroy(async () => {
         if (map != undefined && map != null) {
-            console.log('Unloading Leaflet map.');
+            //console.log('Unloading Leaflet map.');
             map.remove();
         }
     });
@@ -39,19 +41,14 @@
         show()
     });
 
+
     function show() {
-        //console.log('getting data')
         try {
-            let promise = sgxdata.getData(dev, apiUrl, config, filter, $token, transform)
+            let promise = sgxdata.getGroupData(dev, apiUrl, config, filter, $token, transform)
                 .then(
                     (jsonData) => {
                         if (jsonData != null) {
-                            idxLatLon = getLatLonIndexes(jsonData)
-                            if (idxLatLon.lat == -1 || idxLatLon.lon == -1) {
-                                console.log('No latitude or longitude found in data')
-                                return
-                            }
-                            //console.log('map jsonData', jsonData)
+                            //console.log('groupmap jsonData', jsonData)
                             showMap(jsonData)
                         }
                     }
@@ -91,14 +88,16 @@
 
     /**
      * Get marker's popup content
-     * @param jsonData
+     * @param dataElement
      */
-    function getDataTable(jsonData, withHeader) {
+    function getDataTable(dataElement, withHeader) {
         let table = '' // '<div style="width:200px;">'
+        let valueName
         // device EUI
         table += '<div class="row g-0" style="width:200px;">'
-        table += '<div class="border col-12 txt p-1"><b>' + jsonData[0][0]['deviceEUI'] + '</b></div>'
+        table += '<div class="border col-12 txt p-1"><b>' + dataElement[0]['deviceEUI'] + '</b></div>'
         table += '</div>'
+        // header
         if (withHeader) {
             table += '<div class="row g-0" style="width:200px;">'
             table += '<div class="txt border col-6 p-1">'
@@ -106,16 +105,22 @@
                 + utils.getLabel('value', labels, $language) + '</div>'
             table += '</div>'
         }
-        for (let j = 0; j < jsonData[jsonData.length - 1].length; j++) {
+        // measurements
+        for (let j = 0; j < dataElement.length; j++) {
+            if(dataElement[j]==undefined || dataElement[j]==null){
+                continue
+            }
             //don't show lat and lon
-            if (j == idxLatLon.lat || j == idxLatLon.lon) {
+            valueName = dataElement[j]['name'].toLowerCase()
+            if (valueName == _latitude || valueName == _longitude) {
                 continue
             }
             table += '<div class="row g-0" style="width:200px;">'
-            table += '<div class="border col-6 txt p-1">' + jsonData[jsonData.length - 1][j]['name'] + '</div>'
-            table += '<div class="border col-6 value p-1 text-start">' + jsonData[jsonData.length - 1][j]['value'] + '</div>'
+            table += '<div class="border col-6 txt p-1">' + dataElement[j]['name'] + '</div>'
+            table += '<div class="border col-6 value p-1 text-start">' + sgxhelper.getRounded(dataElement[j]['value'],config.rounding) + '</div>'
             table += '</div>'
         }
+        //
         return table
     }
 
@@ -124,18 +129,23 @@
      * @param jsonData
      * @returns {lan, lon}
      */
-    function getLatLonIndexes(jsonData) {
-        let latIndex = -1
-        let lonIndex = -1
-        for (let i = 0; i < jsonData[0].length; i++) {
-            if (jsonData[0][i]['name'].toLowerCase() == _latitude) {
-                latIndex = i
+    function getLatLon(dataElement) {
+        let latitude = 0
+        let longitude = 0
+        //console.log('getLatLon', dataElement)
+        for (let i = 0; i < dataElement.length; i++) {
+            if(dataElement[i]==undefined || dataElement[i]==null){
+                continue
             }
-            if (jsonData[0][i]['name'].toLowerCase() == _longitude) {
-                lonIndex = i
+            //console.log('element', i, dataElement[i])
+            if (dataElement[i]['name'].toLowerCase() == _latitude) {
+                latitude = parseFloat(dataElement[i]['value'])
+            }
+            if (dataElement[i]['name'].toLowerCase() == _longitude) {
+                longitude = parseFloat(dataElement[i]['value'])
             }
         }
-        return { lat: latIndex, lon: lonIndex }
+        return { lat: latitude, lon: longitude }
     }
 
 
@@ -148,23 +158,19 @@
         if (jsonData.length == 0 || jsonData[0].length < 1) {
             return
         }
-        lat = parseFloat(jsonData[jsonData.length - 1][idxLatLon.lat]['value'])
-        lon = parseFloat(jsonData[jsonData.length - 1][idxLatLon.lon]['value'])
 
         //TODO getSelectedLocale()
         //self.measureDate = new Date(jsonData[jsonData.length - 1][0]['timestamp']).toLocaleString(getSelectedLocale())
-
 
         if (map != undefined && map != null) {
             map.remove()
         }
         map = L.map(getMapElementId())
-        map.setView([lat, lon], zoom)
-
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        let polyline = null
+
+        //let polyline = null
         let marker = null
         let popupOptions = {
             maxWidth: 200,
@@ -173,43 +179,65 @@
         let markerOptions = {
 
         }
-        try {
-            marker = L.marker([lat, lon])
-            marker.bindPopup(getDataTable(jsonData, false), popupOptions).openPopup()
-            marker.addTo(map);
-        } catch (err) {
-            console.log(err)
+        // marker colors
+        let calcAlert = (config.range!=undefined && config.range!=null && config.range != '' && config.range.indexOf('@') > 0)
+        let rangeName = ''
+        if (calcAlert && config.range.indexOf('@') > 0){
+            rangeName = config.range.substring(config.range.indexOf('@') + 1)
         }
-        if (jsonData.length > 0) {
-            let tmpLat, tmpLon
-            let latlngs = []
-            for (let i = 0; i < jsonData.length; i++) {
-                tmpLat = parseFloat(jsonData[i][idxLatLon.lat]['value'])
-                tmpLon = parseFloat(jsonData[i][idxLatLon.lon]['value'])
-                if (!(isNaN(tmpLat) || isNaN(tmpLon))) {
-                    latlngs.push([tmpLat, tmpLon])
-                }
-                if (i == 0) {
-                    marker = new L.CircleMarker(L.latLng(tmpLat, tmpLon), {
-                        radius: 4,
-                        stroke: true,
-                        color: 'black',
-                        opacity: 1,
-                        weight: 1,
-                        fill: true,
-                        fillColor: 'gray',
-                        fillOpacity: 0.5
-                    })
-                    marker.addTo(map);
+        let location;
+        let markerArray = []
+        for (let i = 0; i < jsonData.length; i++) {
+            if(jsonData[i]==undefined || jsonData[i]==null){
+                continue
+            }
+            try {
+                location = getLatLon(jsonData[i][0])
+                //console.log('latlngs', location)
+                //marker = L.marker(location)
+                marker = new L.CircleMarker(L.latLng(location.lat, location.lon), {
+                    radius: 10,
+                    stroke: true,
+                    color: 'black',
+                    opacity: 1,
+                    weight: 1,
+                    fill: true,
+                    fillColor: sgxhelper.getMarkerColor(jsonData[i][0], calcAlert, rangeName, config.range),
+                    fillOpacity: 0.5
+                })
+
+                marker.bindPopup(getDataTable(jsonData[i][0], false), popupOptions).openPopup()
+                markerArray.push(marker)
+            } catch (err) {
+                console.log(err)
+            }
+        }
+        let group = L.featureGroup(markerArray).addTo(map);
+        map.fitBounds(group.getBounds());
+    }
+
+/*     function getMarkerColor(point, calcAlert, rangeName, range) {
+        let result = 'green'
+        if (!calcAlert) {
+            return result
+        }
+        for (var i = 0; i < point.length; i++) {
+            if (point[i].name == rangeName) {
+                switch (sgxhelper.getAlertLevel(range, point[i].value, point[i]['timestamp'])) {
+                    case 1:
+                        result = 'yellow'
+                        break
+                    case 2:
+                        result = 'red'
+                        break
+                    case 3:
+                        result = 'grey'
+                        break
                 }
             }
-            polyline = L.polyline(latlngs, {
-                color: '#0095FF'
-            }).addTo(map);
-            // zoom the map to the polyline
-            map.fitBounds(polyline.getBounds());
         }
-    }
+        return result
+    } */
 
     let labels = {
         'measurement': {

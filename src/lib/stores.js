@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { utils } from './utils.js';
 
-export const defaultOrganizationId = writable(null);
+export const defaultOrganizationId = writable(1);
 export const platformInfo = writable(null);
 
 export const getInfo=async (url)=>{
@@ -10,7 +10,7 @@ export const getInfo=async (url)=>{
     fetch(infoUrl)
         .then(response => response.json())
         .then(data => {
-            console.log('layout data', data)
+            //console.log('layout data', data)
             platformInfo.set(data)
             defaultOrganizationId.set(data.defaultOrganizationId)
             return {}

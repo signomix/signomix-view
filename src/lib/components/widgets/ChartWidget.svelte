@@ -32,7 +32,6 @@
     var myChart
     async function show(ctx) {
         try {
-            console.log('show chart')
             let promise = await sgxdata.getData(dev, apiUrl, config, filter, $token, transform)
                 .then(function (data) {
                     if (myChart) myChart.destroy()
@@ -47,7 +46,7 @@
 
     async function transform(widgetConfig, rawData) {
         let jsonData = await rawData;
-        console.log('jsonData', jsonData)
+        //console.log('jsonData', jsonData)
         let namesTranslated = []
         if (config.channel_translated !== null && config.channel_translated !== undefined) {
             namesTranslated = config.channel_translated.split(',')
@@ -84,7 +83,7 @@
         ]
         let dTmp
         let tmpValue
-        console.log('multiLine', multiLine)
+        //console.log('multiLine', multiLine)
         if (true) {
             let tmpDataset = new Array(jsonData.length)
             for (var i = 0; i < jsonData.length; i++) {
@@ -94,10 +93,10 @@
             for (var i = 0; i < jsonData.length; i++) {
                 tmpMeasures[i] = []
             }
-            console.log('jsonData.length', jsonData.length)
+            //console.log('jsonData.length', jsonData.length)
             for (var i = 0; i < jsonData.length; i++) {
                 labels.push(jsonData[i][0]['timestamp'])
-                console.log('push '+jsonData[i][0]['timestamp'])
+                //console.log('push '+jsonData[i][0]['timestamp'])
                 for (var j = 0; j < jsonData[i].length; j++) {
                     try {
                         tmpMeasures[j].push({ x: (new Date(jsonData[i][j]['timestamp']).toISOString()), y: jsonData[i][j]['value'] })
@@ -200,7 +199,7 @@
             data: chartData,
             options: chartOptions
         }
-        console.log(JSON.stringify(charConfig))
+        //console.log(JSON.stringify(charConfig))
         return charConfig
     }
 

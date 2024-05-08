@@ -45,9 +45,9 @@
             {#if 'chartjs'===getWidgetType(index)}
             <ChartjsWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
             {:else if 'canvas'===getWidgetType(index)}
-            <CanvasWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
+            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {:else if 'canvas_placeholder'===getWidgetType(index)}
-            <CanvasWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
+            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {:else if 'chart_placeholder'===getWidgetType(index)}
             <ChartjsWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
             {:else if 'symbol'===getWidgetType(index)}
@@ -68,6 +68,10 @@
             <ReportWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {:else if 'map'===getWidgetType(index)}
             <MapWidget index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+            {:else if 'multimap'===getWidgetType(index)}
+            <GroupMapWidget index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+            {:else if 'multitrack'===getWidgetType(index)}
+            <TracksWidget index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {:else if 'chart'===getWidgetType(index)}
             <ChartWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {:else if 'groupchart'===getWidgetType(index)}
@@ -76,10 +80,10 @@
             {:else if 'stacked'===getWidgetChartType(index)}
             <StackedBarWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {:else}
-            <CanvasWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
+            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {/if}
             {:else}
-            <CanvasWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
+            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
             {/if }
             {/if}<!-- isRoleOK -->
         </div>
@@ -128,6 +132,8 @@
     import StackedBarWidget from '$lib/components/widgets/StackedBarWidget.svelte';
     import ReportWidget from '$lib/components/widgets/ReportWidget.svelte';
     import MapWidget from '$lib/components/widgets/MapWidget.svelte';
+    import GroupMapWidget from '$lib/components/widgets/GroupMapWidget.svelte';
+    import TracksWidget from '$lib/components/widgets/TracksWidget.svelte';
 
     let loadingData = true
     let data = { items: [] }

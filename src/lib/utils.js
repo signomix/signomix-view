@@ -1,30 +1,44 @@
 import { defaultOrganizationId } from '$lib/stores.js';
 
-let defaultOrganizationIdValue
+let defaultOrganizationIdValue = 1
 defaultOrganizationId.subscribe((value) => defaultOrganizationIdValue = value)
 
 export const utils = {
   getBackendUrl: function (url) {
     let x = url.host
-    if (x.startsWith('app.')) {
-      x = x.substring(4)
-    }else if (x.startsWith('cloud.')) {
-      x = x.substring(6)
-    }else if (x.startsWith('view.')) {
-      x = x.substring(5)
+    if (!x.endsWith('localhost')) {
+      if (x.startsWith('app.')) {
+        x = x.substring(4)
+      } else if (x.startsWith('cloud.')) {
+        x = x.substring(6)
+      }
     }
     return url.protocol + '//' + x
   },
   isCloudSubdomain: function (url) {
-    return url.host.startsWith('cloud.')
+    //return url.host.startsWith('cloud.') || url.host.endsWith(this.STANDARD_DOMAIN)
+    return !url.host.startsWith('app.')
   },
   getSubdomain: function (url) {
-    let idx=url.host.indexOf('.')
-    if(idx<1){
+    let idx = url.host.indexOf('.')
+    if (idx < 1) {
       return ''
     }
-    let subdomain=url.host.substring(0, idx)
+    let subdomain = url.host.substring(0, idx)
     return subdomain
+  },
+  isB2bService: function (url) {
+    return url.host.endsWith(this.B2B_DOMAIN)
+  },
+  getTenantName: function (url) {
+    if (url.host.endsWith(this.B2B_DOMAIN)) {
+      return url.host.substring(0, url.host.indexOf('.' + this.B2B_DOMAIN))
+    } else {
+      return ''
+    }
+  },
+  getDefaultOrganizationId: function () {
+    return defaultOrganizationIdValue
   },
   getLocalDateFormat: function (dateString) {
     //zamienia ciąg znaków reprezentujący datę
@@ -64,7 +78,7 @@ export const utils = {
     //na format stosowany przez REST API
     //REST API zamieni znak '~' w definicji offsetu czasu na '+'
     if (dateString === null || dateString === undefined || dateString.trim().length === 0) {
-      console.log('getDateApiISOFormat: null dateString')
+      //console.log('getDateApiISOFormat: null dateString')
       return ''
     }
     //
@@ -117,7 +131,7 @@ export const utils = {
     try {
       return labels[name][language]
     } catch (err) {
-      console.log('getLabel error: ' + err)
+      //console.log('getLabel error: ' + err)
       return name
     }
   },
@@ -137,8 +151,8 @@ export const utils = {
 
   },
   isServiceAvailable: function (userProfile, serviceName) {
-    let SMS=1 // 0b00000001 
-    let SUPPORT=2 // 0b00000010
+    let SMS = 1 // 0b00000001 
+    let SUPPORT = 2 // 0b00000010
     switch (serviceName.toUpperCase()) {
       case 'SMS':
         return SMS & userProfile.services == SMS
@@ -147,7 +161,22 @@ export const utils = {
     }
     return false
   },
-  isObjectAdmin: function (userProfile, objectOwner, defaultOrganizationId) {
+  isHigherAccountType: function (actualUserProfile, managedUserConfig) {
+    if (actualUserProfile == null || actualUserProfile == undefined) return false
+    if (managedUserConfig == null || managedUserConfig == undefined) return false
+    if (actualUserProfile.uid == managedUserConfig.uid) return true
+    switch (actualUserProfile.type) {
+      case 9: // admin
+        return managedUserConfig.type == 0 || managedUserConfig.type == 4
+      case 8: // managing admin
+        return managedUserConfig.type == 0 || managedUserConfig.type == 4 || managedUserConfig.type == 9
+      case 1: // system admin (owner)
+        return true;
+      default:
+        return false
+    }
+  },
+  isObjectAdmin: function (userProfile, objectOwner, defaultOrganizationId, objectAdmins, objectTeam) {
     //user types
     //1 - service admin
     //9 - organization admin
@@ -157,41 +186,43 @@ export const utils = {
     data.isOwner = userProfile.uid == objectOwner
     data.isServiceAdmin = userProfile.type == 1
     data.isOrganizationAdmin = userProfile.type == 9
+    data.isObjectAdmin = objectAdmins!=undefined && objectAdmins!=null && objectAdmins.includes(','+userProfile.uid+',')
+    data.isObjectTeamMember = objectTeam!=undefined && objectTeam!=null && objectTeam.includes(','+userProfile.uid+',')
 
     if (data.isDefault) {
-      result = userProfile.type == 1 || userProfile.uid == objectOwner
+      result = userProfile.type == 1 || userProfile.uid == objectOwner || data.isObjectAdmin
     } else {
       // Service admin or organization admin can manage objects of his organization
       // Object owners which are not service admin or organization admin 
       // are not allowed to manage objects of his organization
       result = userProfile.type == 9 || userProfile.type == 1
     }
-    data.hasAccess = result
-    console.log('isObjectAdmin', data)
+    data.hasAdminRights = result
+    //console.log('isObjectAdmin', data)
     return result
   },
   getUserType: function (name) {
     switch (name) {
-      case 'user': // default type, standard user
-        return 0
-      case 'owner': // owner, service admin
-        return 1
+      case 'user':
+        return 0  // default type, standard user
+      case 'owner':
+        return 1  // owner, service admin
       case 'application':
         return 2
       case 'demo':
-        return 3
-      case 'free':  // free account
-        return 4
-      case 'primary': // primary account
-        return 5
+        return 3  // demo account
+      case 'free':
+        return 4  // free account
+      case 'primary':
+        return 5  // primary account
       case 'readonly':
         return 6
       case 'extended':
         return 7
-      case 'superuser': // superuser
-        return 8
-      case 'admin': // organization admin
-        return 9
+      case 'manag. admin':
+        return 8  // can manage all organization tenants
+      case 'admin':
+        return 9  // tenant admin
       case 'anonymous':
         return 10
       case 'subscriber':
@@ -221,9 +252,9 @@ export const utils = {
       case 7:
         return 'extended'
       case 8:
-        return 'superuser'
+        return 'manag. admin'
       case 9:
-        return 'admin'
+        return 'admin' // tenant admin
       case 10:
         return 'anonymous'
       case 100:
@@ -240,12 +271,19 @@ export const utils = {
       roles = userProfile.role.toLowerCase().split(',')
       return roles.includes(roleName.toLowerCase())
     } catch (err) {
-      console.log("error getting user's role. Returning " + defaultResult)
+      //console.log("error getting user's role. Returning " + defaultResult)
       return defaultResult
     }
   },
+  //// algorithm changed until work on organizations is completed
+  /*isDefaultOrganizationUser: function (userProfile) {
+    //console.log('isDefaultOrganizationUser', userProfile, defaultOrganizationIdValue)
+    let result = userProfile.organization == defaultOrganizationIdValue
+      || defaultOrganizationIdValue == null
+    return result
+  },*/
   isDefaultOrganizationUser: function (userProfile) {
-    console.log('isDefaultOrganizationUser', userProfile, defaultOrganizationIdValue)
+    //return userProfile.type !=8
     let result = userProfile.organization == defaultOrganizationIdValue
       || defaultOrganizationIdValue == null
     return result
@@ -260,8 +298,9 @@ export const utils = {
   AUTHORIZATION_FAILED: 0,
   AUTHENTICATION_FAILED: 1,
   FETCH: 3,
-  FETCH_STATUS: 4
-
+  FETCH_STATUS: 4,
+  STANDARD_DOMAIN: 'signomix.com',
+  B2B_DOMAIN: 'iot360.cloud'
 }
 
 /*

@@ -64,6 +64,31 @@ export const sgxhelper = {
         }
         return 0;
     },
+    getMarkerColor: function(point, calcAlert, rangeName, range) {
+        let result = 'green'
+        if (!calcAlert) {
+            return result
+        }
+        for (var i = 0; i < point.length; i++) {
+            if(point[i]==undefined || point[i]==null) {
+                continue
+            }
+            if (point[i].name == rangeName) {
+                switch (this.getAlertLevel(range, point[i].value, point[i]['timestamp'])) {
+                    case 1:
+                        result = 'yellow'
+                        break
+                    case 2:
+                        result = 'red'
+                        break
+                    case 3:
+                        result = 'grey'
+                        break
+                }
+            }
+        }
+        return result
+    },
     isNotResponding: function (rule, tstamp) {
         let currentTime = Date.now()
         return (Date.now() - tstamp) > rule.value1
@@ -299,85 +324,179 @@ export const sgxhelper = {
             return 'minute'
         }
     },
-    getAccountTypeName: function (role, language) {
+    getAccountTypeName: function (type, language) {
         switch (language) {
             case 'en':
-                switch (role) {
+                switch (type) {
                     case 0:
                         return 'standard'
-                        break
                     case 1:
                         return 'system admin'
-                        break
                     case 2:
                         return 'application' //not used
-                        break
                     case 3:
                         return 'demo'
-                        break
                     case 4:
                         return 'free'
-                        break
                     case 5:
                         return 'primary'
                     case 6:
                         return 'readonly'
-                        break
                     case 7:
                         return 'extended'
-                        break
                     case 8:
-                        return 'demo'
-                        break
+                        return 'manag. admin' //administrator managing tenants
                     case 9:
-                        return 'administrator'
-                        break
+                        return 'administrator' //tenant admin
+                    case 10:
+                        return 'anonymous'
                     case 100:
                         return 'subscriber'
-                        break
+                    case 1000:
+                        return 'any'
                     default:
                         return 'misconfigured'
                 }
                 break
             case 'pl':
-                switch (role) {
+                switch (type) {
                     case 0:
                         return 'standard'
-                        break
                     case 1:
                         return 'administrator systemu'
-                        break
                     case 2:
                         return 'aplikacja' //not used
-                        break
                     case 3:
                         return 'demo'
-                        break
                     case 4:
                         return 'darmowe'
-                        break
                     case 5:
                         return 'primary'
                     case 6:
                         return 'tylko odczyt'
-                        break
                     case 7:
                         return 'rozszerzone'
-                        break
                     case 8:
-                        return 'demo'
-                        break
+                        return 'administrator zarz.' //administrator managing tenants
                     case 9:
-                        return 'administrator'
-                        break
+                        return 'administrator' //tenant admin
+                    case 10:
+                        return 'anonimowy'
                     case 100:
                         return 'subskrybent'
-                        break
+                    case 1000:
+                        return 'any'
                     default:
                         return 'błędnie skonfigurowane'
                 }
                 break
             default:
         }
+    },
+    hasObjectAccess: function(profile, writeAccess, defaultOrganizationId, accessedObject, objectType) {
+        if (accessedObject === null) {
+            console.error("Accessed object is null");
+            return false;
+        }
+        if (profile.type === 1) {
+            return true;
+        }
+        let owner = null;
+        let team = null;
+        let admins = null;
+        let organizationId = 0;
+        let tenantId = 0;
+        let isPublic = false;
+        let path = "";
+    
+        switch(objectType) {
+            case 'Dashboard':
+                team = accessedObject.team;
+                admins = accessedObject.administrators;
+                owner = accessedObject.userID;
+                organizationId = accessedObject.organizationId;
+                isPublic = accessedObject.isShared;
+                break;
+            case 'Device':
+                team = accessedObject.team;
+                admins = accessedObject.administrators;
+                owner = accessedObject.userID;
+                organizationId = accessedObject.organizationId;
+                isPublic = accessedObject.team.includes(",public,");
+                path = accessedObject.path;
+                break;
+            case 'DeviceGroup':
+                team = accessedObject.team;
+                admins = accessedObject.administrators;
+                owner = accessedObject.userID;
+                organizationId = accessedObject.organization;
+                isPublic = accessedObject.team.includes(",public,");
+                break;
+            case 'SentinelConfig':
+                team = accessedObject.team;
+                admins = accessedObject.administrators;
+                owner = accessedObject.userId;
+                organizationId = accessedObject.organizationId;
+                isPublic = accessedObject.team.includes(",public,");
+                break;
+            default:
+                console.error("Unknown object type: " + objectType);
+                return false;
+        }
+    
+        //console.info(`hasObjectAccess: ${user.uid} ${owner} ${team} ${admins} ${organizationId} ${tenantId} ${isPublic} ${path} ${writeAccess} ${user.path}`);
+    
+        if (owner === profile.uid) {
+            return true;
+        }
+        if (profile.uid.toLowerCase() === "public") {
+            return isPublic;
+        }
+        if (profile.organization === defaultOrganizationId) {
+            if (admins.includes("," + profile.uid + ",")) {
+                return true;
+            }
+            if (!writeAccess) {
+                if (team.includes("," + profile.uid + ",")) {
+                    return true;
+                }
+            }
+        } else {
+            if (profile.tenant < 1) {
+                if (!writeAccess) {
+                    if (profile.organization === organizationId) {
+                        return true;
+                    }
+                } else {
+                    if (profile.organization === organizationId && profile.type === 8) {
+                        return true;
+                    }
+                }
+            } else {
+                if (profile.organization !== organizationId) {
+                    return false;
+                }
+                let readAccess = false;
+                let parentPath;
+                let withChildren = false;
+                if (profile.path.endsWith(".ALL") || profile.path.endsWith(".*")) {
+                    parentPath = profile.path.substring(0, profile.path.lastIndexOf("."));
+                    withChildren = true;
+                } else {
+                    parentPath = profile.path;
+                }
+                if (path.toLowerCase() === parentPath) {
+                    readAccess = true;
+                } else if (withChildren) {
+                    readAccess = path.startsWith(parentPath + ".");
+                }
+                if (writeAccess) {
+                    return readAccess && profile.type === 9;
+                } else {
+                    return readAccess;
+                }
+            }
+        }
+        return false;
     }
 }
