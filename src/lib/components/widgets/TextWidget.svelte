@@ -13,6 +13,6 @@
     });
 
 </script>
-<div class="p-1">
+<div class="p-1 overflow-auto">
     {@html config.description}
 </div>

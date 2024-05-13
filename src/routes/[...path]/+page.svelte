@@ -11,6 +11,11 @@
     <h5>{utils.getLabel('notfound',labels,language)}</h5>
     {:else}
     <h5>{dashboardConfig.title}</h5>
+    {#if isMobile}
+    <i class="bi bi-phone-fill h5 me-2 link-dark" on:click="{switchMobile}"></i>
+    {:else}
+    <i class="bi bi-phone h5 me-2 link-dark" on:click="{switchMobile}"></i>
+    {/if}
     <span class="badge rounded-pill text-bg-light h5 me-2">{secondsToRefresh}</span>
     {/if}
     {#if additionalFeatures}
@@ -36,58 +41,72 @@
     {:else if dashboardConfig ==null || dashboardConfig.title==undefined || items.length==0}
     <div class="alert alert-light mx-auto my-auto">{utils.getLabel('empty',labels,language)}</div>
     {:else}
-    <Grid gap={[2,2]} bind:items={items} rowHeight={100} let:item {cols} let:index on:resize={handleResize}
-        on:mount={handleMount}>
-        <div class={getBorderClass(index)}>
-            {#if !isRoleOK(index)}
-            <div class="alert alert-light mx-auto my-auto">{utils.getLabel('hidden',labels,language)}</div>
-            {:else}
-            {#if 'chartjs'===getWidgetType(index)}
-            <ChartjsWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
-            {:else if 'canvas'===getWidgetType(index)}
-            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'canvas_placeholder'===getWidgetType(index)}
-            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'chart_placeholder'===getWidgetType(index)}
-            <ChartjsWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
-            {:else if 'symbol'===getWidgetType(index)}
-            <SymbolWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'text'===getWidgetType(index)}
-            <TextWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'image'===getWidgetType(index)}
-            <ImageWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'link'===getWidgetType(index)}
-            <InternalLink bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'led'===getWidgetType(index)}
-            <LedWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'raw'===getWidgetType(index)}
-            <RawDataWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'plan'===getWidgetType(index)}
-            <PlanWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'report'===getWidgetType(index)}
-            <ReportWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'map'===getWidgetType(index)}
-            <MapWidget index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'multimap'===getWidgetType(index)}
-            <GroupMapWidget index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'multitrack'===getWidgetType(index)}
-            <TracksWidget index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'chart'===getWidgetType(index)}
-            <ChartWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'groupchart'===getWidgetType(index)}
-            {#if 'doughnut'===getWidgetChartType(index)}
-            <DoughnutWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else if 'stacked'===getWidgetChartType(index)}
-            <StackedBarWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {:else}
-            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {/if}
-            {:else}
-            <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
-            {/if }
-            {/if}<!-- isRoleOK -->
+    <div class="row h-100">
+        <div class="{numberOfGridCols}">
+            <Grid gap={[2,2]} bind:items={items} rowHeight={100} let:item {cols} let:index on:resize={handleResize}
+                on:mount={handleMount}>
+                <div class={getBorderClass(index)}>
+                    {#if !isRoleOK(index)}
+                    <div class="alert alert-light mx-auto my-auto">{utils.getLabel('hidden',labels,language)}</div>
+                    {:else}
+                    {#if 'chartjs'===getWidgetType(index)}
+                    <ChartjsWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
+                    {:else if 'canvas'===getWidgetType(index)}
+                    <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {:else if 'canvas_placeholder'===getWidgetType(index)}
+                    <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {:else if 'chart_placeholder'===getWidgetType(index)}
+                    <ChartjsWidgetExample index={index} bind:config={items} bind:filter={dashboardFilter} />
+                    {:else if 'symbol'===getWidgetType(index)}
+                    <SymbolWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'text'===getWidgetType(index)}
+                    <TextWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'image'===getWidgetType(index)}
+                    <ImageWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'link'===getWidgetType(index)}
+                    <InternalLink bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'led'===getWidgetType(index)}
+                    <LedWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'raw'===getWidgetType(index)}
+                    <RawDataWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'plan'===getWidgetType(index)}
+                    <PlanWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'report'===getWidgetType(index)}
+                    <ReportWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'map'===getWidgetType(index)}
+                    <MapWidget index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {:else if 'multimap'===getWidgetType(index)}
+                    <GroupMapWidget index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {:else if 'multitrack'===getWidgetType(index)}
+                    <TracksWidget index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {:else if 'chart'===getWidgetType(index)}
+                    <ChartWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'groupchart'===getWidgetType(index)}
+                    {#if 'doughnut'===getWidgetChartType(index)}
+                    <DoughnutWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else if 'stacked'===getWidgetChartType(index)}
+                    <StackedBarWidget bind:config={dashboardConfig.widgets[index]} bind:filter={dashboardFilter} />
+                    {:else}
+                    <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {/if}
+                    {:else}
+                    <CanvasWidgetExample index={index} bind:config={dashboardConfig.widgets[index]}
+                        bind:filter={dashboardFilter} />
+                    {/if }
+                    {/if}<!-- isRoleOK -->
+                </div>
+            </Grid>
         </div>
-    </Grid>
+        {#if isMobile}
+        <div class="col-1 d-block bg-secondary bg-opacity-25"></div>
+        {/if}
+    </div>
     {/if}
 </div>
 <!-- Filter modal -->
@@ -106,7 +125,7 @@
     </div>
 </div>
 <script>
-    import { onMount, beforeUpdate, afterUpdate } from 'svelte';
+    import { onMount, beforeUpdate, afterUpdate, tick } from 'svelte';
     import Grid from "svelte-grid";
     import gridHelp from "svelte-grid/build/helper/index.mjs";
     import { dev } from '$app/environment';
@@ -167,6 +186,13 @@
         }
     ]
 
+    let isMobile = false
+    let numberOfGridCols
+    $: if(isMobile){
+        numberOfGridCols = 'col-11'
+    }else{
+        numberOfGridCols = 'col-12'
+    }
 
     // Documentation of cols
     // https://github.com/vaheqelyan/svelte-grid/issues/140
@@ -175,9 +201,9 @@
     let getBorderClass = function (idx) {
         try {
             if (dashboardConfig.widgets[idx].type == 'link') {
-                return 'dashboard-widget content bg-white'
+                return 'dashboard-widget content bg-white display'
             } else {
-                return 'dashboard-widget content bg-white border border-primary rounded-1'
+                return 'dashboard-widget content bg-white display h-100 border border-primary rounded-1'
             }
         } catch (e) {
             return ''
@@ -277,8 +303,6 @@
         console.log('beforeNavigate', from, to);
         //clearInterval(interval);
     })
-    afterUpdate(() => {
-    })
     onMount(() => {
         const interval2 = setInterval(() => {
             secondsToRefresh = secondsToRefresh - 1
@@ -329,6 +353,16 @@
     function linkFormCallback() {
         // do nothing
     }
+    const touchScrollAllow = async () => {
+        await tick()
+        //for (let elm of document.querySelectorAll('.svlt-grid-item'))
+        for (let elm of document.querySelectorAll('.dashboard-widget'))
+            elm.style.touchAction = 'auto'
+    }
+
+    afterUpdate(() => {
+        touchScrollAllow()
+    })
 
     let labels = {
         'loading': {
@@ -435,6 +469,15 @@
         })
         loadingData = false
         return cfg
+    }
+
+    let getRightPadding = function(){
+        return 'me-3'
+    }
+
+    let switchMobile = function(){
+        isMobile = !isMobile
+        refreshView()
     }
 
 </script>

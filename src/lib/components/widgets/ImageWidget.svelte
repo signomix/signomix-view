@@ -13,6 +13,6 @@
     });
 
 </script>
-<div class="container p-1">
+<div class="container p-1 overflow-hidden">
     <img class="img-fluid" src="{config.imageUrl}">
 </div>
