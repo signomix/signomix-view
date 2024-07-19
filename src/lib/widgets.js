@@ -54,7 +54,7 @@ export const widgets = {
         date: ['dev_id','channel', 'query'],
         devinfo: ['dev_id',],
         image: ['imageUrl'],
-        led: ['dev_id','channel', 'range', 'query'],
+        led: ['dev_id','channel', 'range', 'query','icon'],
         link: ['dashboardID'],
         map: ['dev_id','channel', 'query','rounding'],
         multimap: ['group','channel', 'range', 'query','rounding'],
@@ -151,8 +151,8 @@ export const widgets = {
                 pl: 'Data'
             },
             'devinfo': {
-                en: 'Device info',
-                pl: 'Informacje o urządzeniu'
+                pl: 'Informacje o źródle danych',
+                en: 'Data source info'
             },
             'image': {
                 en: 'Image',
@@ -187,8 +187,8 @@ export const widgets = {
                 pl: 'Surowe dane'
             },
             'report': {
-                en: 'Group report',
-                pl: 'Raport grupowy'
+                pl: 'Tabela z danymi',
+                en: 'Data table'
             },
             'symbol': {
                 pl: 'Karta wartości',
